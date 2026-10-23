@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: quotelab-postgres
+    environment:
+      POSTGRES_DB: quotelab
+      POSTGRES_USER: quotelab
+      POSTGRES_PASSWORD: quotelab
+    ports:
+      - "5432:5432"
+    volumes:
+      - quotelab-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quotelab -d quotelab"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: quotelab-backend
+    pull_policy: build
+    container_name: quotelab-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/quotelab
+      DB_USER: quotelab
+      DB_PASSWORD: quotelab
+      QUOTELAB_DEV: "true"
+      JAVA_OPTS: "-Xmx512m"
+    ports:
+      - "8080:8080"
+      - "8085:8085"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: quotelab-frontend
+    pull_policy: build
+    container_name: quotelab-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    restart: unless-stopped
+
+volumes:
+  quotelab-pg:

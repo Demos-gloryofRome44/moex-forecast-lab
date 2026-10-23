@@ -1,0 +1,33 @@
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark" aria-hidden="true"></span>
+      quotelab
+    </a>
+    <nav class="nav">
+      <a routerLink="/leaderboard" routerLinkActive="active">Рейтинг</a>
+      <a routerLink="/instruments" routerLinkActive="active">Инструменты</a>
+      <a routerLink="/forecasts" routerLinkActive="active">Журнал</a>
+      <a routerLink="/guide" routerLinkActive="active">Справка</a>
+    </nav>
+    <div class="topbar-actions">
+      <span class="live" [class.on]="stream.connected()" [title]="stream.connected() ? 'Живое обновление подключено' : 'Нет связи с потоком событий'">
+        <i aria-hidden="true"></i>{{ stream.connected() ? 'live' : 'offline' }}
+      </span>
+      <button type="button" class="icon-btn" (click)="theme.toggle()"
+              [attr.aria-label]="theme.theme() === 'dark' ? 'Светлая тема' : 'Тёмная тема'"
+              [title]="theme.theme() === 'dark' ? 'Светлая тема' : 'Тёмная тема'">
+        @if (theme.theme() === 'dark') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        }
+      </button>
+    </div>
+  </div>
+  <div class="disclaimer" role="note">
+    <div class="disclaimer-inner">Не инвестиционная рекомендация · бумажная торговля на открытых данных MOEX ISS с задержкой ~15 минут</div>
+  </div>
+</header>
+
+<main class="page"><router-outlet /></main>

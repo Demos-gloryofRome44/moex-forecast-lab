@@ -1,0 +1,21 @@
+.add {
+  display: flex; gap: 8px; width: min(100%, 380px);
+  .input { flex: 1; }
+}
+.add-error { margin-top: 20px; border-left-color: var(--danger); .note-label { color: var(--danger); } }
+
+.controls { margin-top: -8px; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 8px 20px;
+  font-size: 13px; color: var(--text-2);
+  span { display: inline-flex; align-items: center; gap: 6px; }
+  b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+}
+.legend-note { color: var(--text-3); }
+.swatch {
+  width: 10px; height: 10px; border-radius: 3px;
+  &.hit { background: var(--good); }
+  &.miss { background: var(--critical); }
+  &.pending { background: var(--pending); }
+}

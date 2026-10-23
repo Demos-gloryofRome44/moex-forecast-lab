@@ -1,0 +1,115 @@
+<div class="card sim">
+  <div class="card-head">
+    <h2>Мерило: как выглядит прогноз без информации</h2>
+    <p>Каждый бросок — прогноз, который угадывает ровно в половине случаев: орёл — попадание, решка — промах. С этим и сравниваются индикаторы.</p>
+  </div>
+
+  <div class="stage">
+    <div class="coin-wrap" [class.spinning]="spinning()">
+      <div class="coin" [style.transform]="'rotateY(' + coinAngle() + 'deg)'">
+        <div class="face heads"><span>✓</span>Попал</div>
+        <div class="face tails"><span>✕</span>Мимо</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="flipOnce()">Подбросить</button>
+      <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="flipMany(10)">+10 бросков</button>
+      <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="autoRun()">1000 бросков</button>
+      <button type="button" class="btn btn-secondary" [disabled]="!flips().length" (click)="reset()">Сначала</button>
+    </div>
+
+    <div class="score">
+      <app-hit-rate [stats]="stats()" />
+    </div>
+  </div>
+
+  <div class="tape" aria-label="Последние броски">
+    @for (hit of strip(); track $index) {
+      <i [class.hit]="hit" [class.miss]="!hit"></i>
+    } @empty {
+      <span class="tape-empty">Здесь появятся броски</span>
+    }
+  </div>
+
+  <div class="plot" #plot>
+    <svg [attr.width]="width()" [attr.height]="height" role="img" aria-label="Накопленный hit rate монетки с 95%-интервалом"
+         (mousemove)="onMove($event)" (mouseleave)="hover.set(null)">
+      @for (t of yTicks; track t) {
+        <line class="grid" [attr.x1]="pad.l" [attr.x2]="width() - pad.r" [attr.y1]="y(t)" [attr.y2]="y(t)" />
+        <text class="tick" [attr.x]="pad.l - 8" [attr.y]="y(t) + 4" text-anchor="end">{{ pct(t) }}</text>
+      }
+      @for (t of xTicks(); track $index) {
+        <text class="tick" [attr.x]="x(t, n())" [attr.y]="height - 8" text-anchor="middle">{{ t }}</text>
+      }
+      @if (n() >= 30) {
+        <line class="mark" [attr.x1]="x(30, n())" [attr.x2]="x(30, n())" [attr.y1]="pad.t" [attr.y2]="height - pad.b" />
+        <text class="mark-label" [attr.x]="x(30, n()) + 4" [attr.y]="pad.t + 12">n = 30</text>
+      }
+      <line class="coin-ref" [attr.x1]="pad.l" [attr.x2]="width() - pad.r" [attr.y1]="y(0.5)" [attr.y2]="y(0.5)" />
+      <path class="band" [attr.d]="bandPath()" />
+      <path class="line" [attr.d]="linePath()" />
+      @if (hovered(); as h) {
+        <line class="cursor" [attr.x1]="x(h.n, n())" [attr.x2]="x(h.n, n())" [attr.y1]="pad.t" [attr.y2]="height - pad.b" />
+        <circle class="cursor-dot" [attr.cx]="x(h.n, n())" [attr.cy]="y(h.rate)" r="5" />
+      }
+    </svg>
+    @if (hovered(); as h) {
+      <div class="tooltip" [style.left.px]="x(h.n, n())" [class.flip]="x(h.n, n()) > width() - 200">
+        <b>{{ pct(h.rate) }}</b> после {{ h.n }} бросков
+        <span>интервал {{ pct(h.low) }} – {{ pct(h.high) }}</span>
+      </div>
+    }
+    <div class="legend">
+      <span><i class="sw line-sw"></i>Накопленный hit rate</span>
+      <span><i class="sw band-sw"></i>95%-интервал</span>
+      <span><i class="sw ref-sw"></i>Монетка, 50%</span>
+    </div>
+  </div>
+
+  <p class="verdict">{{ verdict() }}</p>
+
+  <div class="race">
+    <div class="race-head">
+      <div>
+        <h3>Гонка {{ raceCoins }} монеток</h3>
+        <p>Двадцать честных монеток по {{ raceFlips }} бросков. Серая воронка — где должна держаться честная монетка в 95% случаев.</p>
+      </div>
+      <button type="button" class="btn btn-secondary" (click)="race()">Запустить гонку</button>
+    </div>
+
+    <svg class="race-plot" [attr.width]="width()" [attr.height]="height" role="img" aria-label="Накопленный hit rate двадцати монеток">
+      @for (t of yTicks; track t) {
+        <line class="grid" [attr.x1]="pad.l" [attr.x2]="width() - pad.r" [attr.y1]="y(t)" [attr.y2]="y(t)" />
+        <text class="tick" [attr.x]="pad.l - 8" [attr.y]="y(t) + 4" text-anchor="end">{{ pct(t) }}</text>
+      }
+      <text class="tick" [attr.x]="x(1, raceFlips)" [attr.y]="height - 8" text-anchor="middle">1</text>
+      <text class="tick" [attr.x]="x(raceFlips, raceFlips)" [attr.y]="height - 8" text-anchor="middle">{{ raceFlips }}</text>
+      <path class="funnel" [attr.d]="funnelPath()" />
+      <line class="coin-ref" [attr.x1]="pad.l" [attr.x2]="width() - pad.r" [attr.y1]="y(0.5)" [attr.y2]="y(0.5)" />
+      @for (d of racePaths(); track $index) {
+        @if ($index !== raceLeader()) {
+          <path class="runner" [attr.d]="d" />
+        }
+      }
+      @if (raceLeader() >= 0) {
+        <path class="leader" [attr.d]="racePaths()[raceLeader()]" />
+      }
+      @if (leaderLabel(); as l) {
+        <circle class="cursor-dot" [attr.cx]="l.x" [attr.cy]="l.y" r="4" />
+        <text class="leader-label" [attr.x]="l.x - 8" [attr.y]="l.y - 10" text-anchor="end">лидер {{ pct(l.rate) }}</text>
+      }
+    </svg>
+
+    @if (raceSummary(); as s) {
+      <div class="note">
+        <span class="note-label">Итог гонки</span>
+        <p>
+          Лидер закончил с {{ pct(s.best) }}, а {{ s.above55 }} из {{ raceCoins }} монеток показали 55% и выше — и это всё ещё монетки.
+          По правилу сервиса «лучше монетки» (весь интервал выше 50%) признано: {{ s.recognised }} из {{ raceCoins }}.
+          Поэтому в рейтинге важен не лидер, а нижняя граница его интервала.
+        </p>
+      </div>
+    }
+  </div>
+</div>

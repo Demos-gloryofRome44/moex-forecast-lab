@@ -1,0 +1,125 @@
+httpServer:
+  publicApiHttpPort: ${HTTP_PORT:8080}
+  # Метрики Prometheus и пробы: http://localhost:8085/metrics, /system/readiness, /system/liveness
+  privateApiHttpPort: ${PRIVATE_HTTP_PORT:8085}
+  telemetry:
+    logging:
+      enabled: true
+  # Открытые SSE-соединения иначе держат остановку сервиса до 30 секунд.
+  shutdownWait: 3s
+
+db:
+  jdbcUrl: ${DB_URL:jdbc:postgresql://localhost:5432/quotelab}
+  username: ${DB_USER:quotelab}
+  password: ${DB_PASSWORD:quotelab}
+  poolName: quotelab
+  maxPoolSize: 10
+  telemetry:
+    logging:
+      enabled: false
+
+flyway:
+  enabled: true
+  locations:
+    - db/migration
+
+httpClient:
+  moex:
+    url: ${MOEX_ISS_URL:https://iss.moex.com}
+    requestTimeout: 15s
+    telemetry:
+      logging:
+        enabled: true
+
+resilient:
+  circuitbreaker:
+    moex:
+      slidingWindowSize: 20
+      minimumRequiredCalls: 5
+      failureRateThreshold: 50
+      waitDurationInOpenState: 60s
+      permittedCallsInHalfOpenState: 2
+  retry:
+    moex:
+      attempts: 3
+      delay: 500ms
+      delayStep: 1s
+  timeout:
+    moex:
+      duration: 20s
+
+moex:
+  minRequestInterval: 250ms
+  pageSize: 500
+
+quartz:
+  "org.quartz.threadPool.threadCount": "2"
+
+logging:
+  levels:
+    root: INFO
+    "ru.quotelab": INFO
+    "org.quartz": WARN
+    "com.zaxxer.hikari": WARN
+
+quotelab:
+  api:
+    # Админ-эндпоинты (/api/admin/*) — только в dev-профиле: QUOTELAB_DEV=true.
+    adminEnabled: ${QUOTELAB_DEV:false}
+    maxPageSize: 200
+
+  # Стартовый watchlist; добавить бумагу можно через POST /api/instruments.
+  watchlist:
+    - { secid: SBER, board: TQBR, name: "Сбербанк России" }
+    - { secid: GAZP, board: TQBR, name: "Газпром" }
+    - { secid: LKOH, board: TQBR, name: "ЛУКОЙЛ" }
+    - { secid: ROSN, board: TQBR, name: "Роснефть" }
+    - { secid: IMOEX, board: SNDX, name: "Индекс МосБиржи" }
+
+  market:
+    zone: Europe/Moscow
+    initialLoadYears: 2
+    # Сессии выходного дня MOEX не считаются торговыми днями горизонта.
+    includeWeekendSessions: false
+
+  forecast:
+    horizons: [1, 5, 20]
+    maxStaleDays: 5
+
+  evaluation:
+    flatThreshold: "0.001"
+    batchSize: 1000
+
+  paperTrading:
+    commissionPerSide: "0.0005"
+    slippagePerSide: "0.0005"
+
+  metrics:
+    minSampleSize: 30
+
+  # Смена параметров требует новой версии: старая версия и её прогнозы остаются в БД.
+  strategies:
+    smaCrossover: { enabled: true, version: "1", fast: 10, slow: 30 }
+    rsi: { enabled: true, version: "1", period: 14, oversold: 30.0, overbought: 70.0 }
+    macd: { enabled: true, version: "1", fast: 12, slow: 26, signal: 9 }
+    bollinger: { enabled: true, version: "1", period: 20, width: "2.0" }
+    baselines: { version: "1", randomSeed: 42 }
+    ensemble: { enabled: true, version: "2", eta: 0.1 }
+
+  jobs:
+    enabled: ${QUOTELAB_JOBS_ENABLED:true}
+    syncOnStartup: ${QUOTELAB_SYNC_ON_STARTUP:true}
+    startupDelay: 2s
+
+  schedule:
+    # Quartz cron: сек мин час день месяц день_недели. Часовой пояс JVM — Europe/Moscow.
+    candleSync:
+      cron: "0 15 19 ? * MON-FRI"
+    evaluation:
+      cron: "0 5 * * * ?"
+
+  cache:
+    leaderboard: { expireAfterWrite: 10m, maximumSize: 500 }
+    performance: { expireAfterWrite: 10m, maximumSize: 2000 }
+    calibration: { expireAfterWrite: 10m, maximumSize: 500 }
+    equity: { expireAfterWrite: 10m, maximumSize: 2000 }

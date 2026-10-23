@@ -1,0 +1,107 @@
+<section class="intro">
+  <div>
+    <h1>Журнал прогнозов</h1>
+    <p>Прогноз фиксируется в момент выдачи и больше не меняется — позже появляется только оценка. Таблица обновляется вживую.</p>
+  </div>
+</section>
+
+<div class="toolbar">
+  <div class="field">
+    <label class="label" for="f-secid">Бумага</label>
+    <span class="select">
+      <select id="f-secid" class="input" [value]="secid()" (change)="secid.set(value($event))">
+        <option value="">Все</option>
+        @for (i of instruments.value(); track i.secid) {
+          <option [value]="i.secid">{{ i.secid }}</option>
+        }
+      </select>
+    </span>
+  </div>
+  <div class="field wide">
+    <label class="label" for="f-strategy">Стратегия</label>
+    <span class="select">
+      <select id="f-strategy" class="input" [value]="strategyId()" (change)="strategyId.set(value($event))">
+        <option value="">Все</option>
+        @for (s of strategies.value(); track s.id) {
+          <option [value]="s.id" [selected]="s.id === strategyId()">{{ s.code }} · v{{ s.version }}</option>
+        }
+      </select>
+    </span>
+  </div>
+  <div class="field">
+    <label class="label" for="f-status">Статус</label>
+    <span class="select">
+      <select id="f-status" class="input" [value]="status()" (change)="status.set($any(value($event)))">
+        <option value="">Все</option>
+        <option value="PENDING">Ждут цели</option>
+        <option value="EVALUATED">Оценены</option>
+      </select>
+    </span>
+  </div>
+  <div class="field">
+    <label class="label" for="f-horizon">Горизонт</label>
+    <span class="select">
+      <select id="f-horizon" class="input" [value]="horizon() ?? ''" (change)="horizon.set(value($event) ? +value($event) : null)">
+        <option value="">Все</option>
+        <option value="1">1 день</option>
+        <option value="5">5 дней</option>
+        <option value="20">20 дней</option>
+      </select>
+    </span>
+  </div>
+  <div class="field">
+    <label class="label" for="f-origin">Режим</label>
+    <span class="select">
+      <select id="f-origin" class="input" [value]="origin()" (change)="origin.set($any(value($event)))">
+        <option value="LIVE">Живой журнал</option>
+        <option value="BACKTEST">Бэктест</option>
+        <option value="">Все</option>
+      </select>
+    </span>
+  </div>
+</div>
+
+<section class="card">
+  <app-state [loading]="journal.isLoading()" [error]="journal.error()" [empty]="!journal.value()?.items?.length"
+             emptyTitle="Ничего не нашлось" emptyText="Попробуйте другие фильтры." (retry)="journal.reload()">
+    @if (journal.value(); as j) {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Дата</th><th>Бумага</th><th>Стратегия</th><th class="num">Горизонт</th><th>Прогноз</th><th class="num">Уверенность</th>
+              <th class="num">Цена выдачи</th><th>Цель</th><th class="num">Цена цели</th><th class="num">Доходность</th><th>Исход</th><th class="num">Brier</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of j.items; track f.id) {
+              <tr>
+                <td>{{ f.tradeDate | ruDate }}</td>
+                <td><a [routerLink]="['/instruments', f.secid]">{{ f.secid }}</a></td>
+                <td>
+                  <a [routerLink]="['/strategies', f.strategyId]">{{ f.strategyCode }}</a>
+                  <p class="meta">v{{ f.strategyVersion }}</p>
+                </td>
+                <td class="num">{{ f.horizon }} д.</td>
+                <td><app-direction [direction]="f.direction" /></td>
+                <td class="num">{{ f.confidence | pct }}</td>
+                <td class="num">{{ f.basePrice | num }}</td>
+                <td>{{ (f.evaluation?.targetTradeDate ?? f.expectedTargetDate) | ruDate }}</td>
+                <td class="num">{{ f.evaluation?.actualPrice | num }}</td>
+                <td class="num">{{ f.evaluation?.actualReturn | signedPct }}</td>
+                <td><app-outcome [outcome]="f.evaluation?.outcome" /></td>
+                <td class="num">{{ f.evaluation?.brier | num: 3 }}</td>
+                <td><app-origin [origin]="f.origin" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <nav class="pager" aria-label="Страницы">
+        <button type="button" class="btn btn-secondary" [disabled]="page() === 0" (click)="page.set(page() - 1)">Назад</button>
+        <span>Страница {{ page() + 1 }} из {{ pages() }} · всего {{ j.total | int }}</span>
+        <button type="button" class="btn btn-secondary" [disabled]="page() + 1 >= pages()" (click)="page.set(page() + 1)">Вперёд</button>
+      </nav>
+    }
+  </app-state>
+</section>

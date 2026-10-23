@@ -1,0 +1,134 @@
+<app-state [loading]="strategy.isLoading()" [error]="strategy.error()" [empty]="!strategy.value()" [compact]="true"
+           errorTitle="Стратегия не загрузилась" emptyTitle="Стратегия не найдена" emptyText="Проверьте ссылку или вернитесь к рейтингу." (retry)="strategy.reload()">
+  @if (strategy.value(); as s) {
+    <section class="intro">
+      <div>
+        <a routerLink="/leaderboard" class="back">← Рейтинг</a>
+        <h1>{{ s.code }}</h1>
+        <p>
+          v{{ s.version }} · {{ kindLabel(s.kind) }}@if (paramsText()) { · {{ paramsText() }} }
+          @if (!s.isActive) { · версия неактивна }
+        </p>
+      </div>
+    </section>
+  }
+</app-state>
+
+<div class="toolbar">
+  <app-segmented label="Горизонт" [options]="horizonOptions" [(value)]="horizon" />
+  <app-segmented label="Режим" [options]="originOptions" [(value)]="origin" />
+</div>
+
+@if (origin() === 'BACKTEST') {
+  <div class="note violet backtest">
+    <span class="note-label">Бэктест</span>
+    <p>Исторические прогнозы с той же защитой от заглядывания в будущее, но цель уже была известна. Отдельно от живого журнала.</p>
+  </div>
+}
+
+<app-state [loading]="performance.isLoading()" [error]="performance.error()" [empty]="!performance.value()" [compact]="true" (retry)="performance.reload()">
+  @if (performance.value(); as p) {
+    <section class="tiles">
+      <div class="card tile tile-wide">
+        <span class="tile-label">Hit rate</span>
+        <app-hit-rate [stats]="p.stats" />
+      </div>
+      <div class="card tile" [class.dim]="p.stats.insufficientData">
+        <span class="tile-label">Средний Brier</span>
+        <span class="tile-value">{{ p.stats.meanBrier | num: 3 }}</span>
+        <span class="tile-note">ниже — лучше, у монетки 0,250</span>
+      </div>
+      <div class="card tile">
+        <span class="tile-label">Доходность</span>
+        <span class="tile-value">{{ p.paper.totalReturn | signedPct }}</span>
+        <span class="tile-note">{{ p.paper.trades | int }} сделок</span>
+      </div>
+      <div class="card tile">
+        <span class="tile-label">Sharpe</span>
+        <span class="tile-value">{{ p.paper.sharpe | num }}</span>
+        <span class="tile-note">годовой</span>
+      </div>
+      <div class="card tile">
+        <span class="tile-label">Макс. просадка</span>
+        <span class="tile-value">{{ -p.paper.maxDrawdown | signedPct }}</span>
+      </div>
+      <div class="card tile">
+        <span class="tile-label">Оценки</span>
+        <span class="tile-value">{{ p.stats.evaluated | int }}</span>
+        <span class="tile-note">{{ p.stats.hits }} попаданий · {{ p.stats.misses }} промахов · {{ p.stats.neutrals }} нейтр.</span>
+      </div>
+    </section>
+  }
+</app-state>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>Кривая капитала</h2>
+      <p>Бумажная торговля по всем бумагам равными долями, с комиссией и проскальзыванием.</p>
+    </div>
+    <app-state [loading]="equity.isLoading()" [error]="equity.error()" [empty]="!equity.value()?.points?.length" [compact]="true"
+               emptyTitle="Нет оценённых прогнозов" emptyText="Кривая появится после первых оценок." (retry)="equity.reload()">
+      @if (equity.value(); as e) {
+        <app-equity-chart [points]="e.points" />
+      }
+    </app-state>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Калибровка</h2>
+      <p>Совпадает ли заявленная уверенность с частотой попаданий. Вертикали — 95%-интервалы.</p>
+    </div>
+    <app-state [loading]="calibration.isLoading()" [error]="calibration.error()" [empty]="!calibration.value()?.sampleSize" [compact]="true"
+               emptyTitle="Нет оценок" emptyText="Нужны прогнозы с исходом «попадание» или «промах»." (retry)="calibration.reload()">
+      @if (calibration.value(); as c) {
+        <app-calibration-chart [buckets]="c.buckets" />
+        <table class="table">
+          <thead><tr><th>Уверенность</th><th class="num">n</th><th class="num">Hit rate</th><th class="num">95% интервал</th></tr></thead>
+          <tbody>
+            @for (b of c.buckets; track b.lower) {
+              <tr [class.dim]="b.sampleSize < 30">
+                <td>{{ b.lower | pct }} – {{ b.upper | pct }}</td>
+                <td class="num">{{ b.sampleSize | int }}</td>
+                <td class="num">{{ b.hitRate | pct }}</td>
+                <td class="num">{{ b.sampleSize ? (b.wilsonLow | pct) + ' – ' + (b.wilsonHigh | pct) : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </app-state>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Последние прогнозы</h2>
+  </div>
+  <app-state [loading]="recent.isLoading()" [error]="recent.error()" [empty]="!recent.value()?.items?.length" [compact]="true"
+             emptyTitle="Прогнозов пока нет" emptyText="Они появятся после следующего запуска." (retry)="recent.reload()">
+    @if (recent.value(); as r) {
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Дата</th><th>Бумага</th><th>Прогноз</th><th class="num">Уверенность</th><th class="num">Цена</th><th>Цель</th><th class="num">Доходность</th><th>Исход</th><th></th></tr></thead>
+          <tbody>
+            @for (f of r.items; track f.id) {
+              <tr>
+                <td>{{ f.tradeDate | ruDate }}</td>
+                <td><a [routerLink]="['/instruments', f.secid]">{{ f.secid }}</a></td>
+                <td><app-direction [direction]="f.direction" /></td>
+                <td class="num">{{ f.confidence | pct }}</td>
+                <td class="num">{{ f.basePrice | num }}</td>
+                <td>{{ (f.evaluation?.targetTradeDate ?? f.expectedTargetDate) | ruDate }}</td>
+                <td class="num">{{ f.evaluation?.actualReturn | signedPct }}</td>
+                <td><app-outcome [outcome]="f.evaluation?.outcome" /></td>
+                <td><app-origin [origin]="f.origin" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <a routerLink="/forecasts" [queryParams]="{ strategyId: id() }" class="more">Весь журнал по стратегии →</a>
+    }
+  </app-state>
+</section>

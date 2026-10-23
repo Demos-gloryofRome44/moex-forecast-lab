@@ -1,0 +1,68 @@
+<section class="intro">
+  <div>
+    <h1>Рейтинг стратегий</h1>
+    <p>Доля угаданных направлений с 95%-интервалом Уилсона на фоне бейзлайнов. Стратегия лучше монетки, только если весь интервал выше 50% при выборке от 30 оценок. <a routerLink="/guide">Как читать рейтинг →</a></p>
+  </div>
+</section>
+
+<div class="toolbar">
+  <app-segmented label="Горизонт" [options]="horizonOptions" [(value)]="horizon" />
+  <app-segmented label="Режим" [options]="originOptions" [(value)]="origin" />
+</div>
+
+@if (origin() === 'BACKTEST') {
+  <div class="note violet backtest">
+    <span class="note-label">Бэктест</span>
+    <p>Прогнозы построены задним числом на исторических данных. Это отдельный режим, его нельзя смешивать с живым журналом.</p>
+  </div>
+}
+
+<app-state [loading]="board.isLoading()" [error]="board.error()" [empty]="!board.value()?.rows?.length"
+           emptyTitle="Стратегий пока нет" emptyText="Они появятся после первого запуска сервиса." (retry)="board.reload()">
+  @if (board.value(); as b) {
+    <div class="card">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Стратегия</th>
+              <th>Hit rate · 95% интервал</th>
+              <th class="num">Brier</th>
+              <th class="num">К лучшему бейзлайну</th>
+              <th class="num">Доходность</th>
+              <th class="num">Sharpe</th>
+              <th class="num">Макс. просадка</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of b.rows; track row.strategyId) {
+              <tr [class.baseline]="row.isBaseline" [class.dim]="row.stats.insufficientData">
+                <td class="num rank">{{ row.rank }}</td>
+                <td>
+                  <a class="name" [routerLink]="['/strategies', row.strategyId]" [queryParams]="{ horizon: horizon(), origin: origin() }">{{ row.strategyCode }}</a>
+                  <p class="meta">v{{ row.strategyVersion }} · {{ kindLabel(row.kind) }}</p>
+                </td>
+                <td><app-hit-rate [stats]="row.stats" [minSample]="b.minSampleSize" /></td>
+                <td class="num metric">{{ row.stats.meanBrier | num: 3 }}</td>
+                <td class="num metric">{{ row.isBaseline ? '—' : (row.hitRateVsBestBaseline | pp) }}</td>
+                <td class="num metric">{{ row.paper.totalReturn | signedPct }}</td>
+                <td class="num metric">{{ row.paper.sharpe | num }}</td>
+                <td class="num metric">{{ -row.paper.maxDrawdown | signedPct }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="notes">
+      @for (w of b.warnings; track $index) {
+        <div class="note"><p>{{ w }}</p></div>
+      }
+      <p class="footnote">
+        Бумажная торговля: комиссия {{ b.rows[0]?.paper?.commissionPerSide | pct }} и проскальзывание {{ b.rows[0]?.paper?.slippagePerSide | pct }} за сторону, каждый прогноз — транш 1/h капитала.
+      </p>
+    </div>
+  }
+</app-state>

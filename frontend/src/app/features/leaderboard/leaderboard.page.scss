@@ -1,0 +1,10 @@
+.backtest { margin-bottom: 24px; }
+
+.rank { width: 32px; color: var(--text-3); }
+.metric { padding-top: 12px; }
+
+tr.baseline td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+tr.baseline td:first-child { box-shadow: inset 2px 0 0 var(--warn); }
+tr.dim .metric { color: var(--text-3); }
+
+.footnote { margin: 14px 0 0; font-size: 13px; color: var(--text-3); }

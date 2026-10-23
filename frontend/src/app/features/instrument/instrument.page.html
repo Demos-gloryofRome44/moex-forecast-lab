@@ -1,0 +1,59 @@
+<section class="intro">
+  <div>
+    <h1>{{ secid() }}</h1>
+    <p>{{ current()?.name ?? 'Дневные свечи MOEX' }} · последняя свеча {{ current()?.lastTradeDate | ruDate }}</p>
+  </div>
+  <form class="add" (ngSubmit)="add()">
+    <input class="input" name="secid" [(ngModel)]="newSecid" placeholder="Тикер, например YDEX" aria-label="Тикер новой бумаги" maxlength="36" />
+    <button type="submit" class="btn btn-primary" [disabled]="adding() || !newSecid.trim()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      {{ adding() ? 'Проверяю…' : 'Добавить' }}
+    </button>
+  </form>
+</section>
+
+@if (addError(); as e) {
+  <div class="note add-error">
+    <span class="note-label">Не удалось добавить</span>
+    <p>{{ e.error }}</p>
+  </div>
+}
+
+<div class="toolbar">
+  <nav class="chips" aria-label="Бумаги">
+    @for (i of instruments.value(); track i.secid) {
+      <a class="chip" [routerLink]="['/instruments', i.secid]" [class.active]="i.secid === secid()">{{ i.secid }}</a>
+    }
+  </nav>
+</div>
+
+<div class="toolbar controls">
+  <div class="field">
+    <label class="label" for="strategy">Стратегия</label>
+    <span class="select">
+      <select id="strategy" class="input" [value]="strategyId()" (change)="strategyId.set($any($event.target).value)">
+        @for (s of activeStrategies(); track s.id) {
+          <option [value]="s.id" [selected]="s.id === strategyId()">{{ s.code }} · v{{ s.version }}{{ s.isBaseline ? ' · бейзлайн' : '' }}</option>
+        }
+      </select>
+    </span>
+  </div>
+  <app-segmented label="Горизонт" [options]="horizonOptions" [(value)]="horizon" />
+  <app-segmented label="Режим" [options]="originOptions" [(value)]="origin" />
+</div>
+
+<section class="card">
+  <app-state [loading]="candles.isLoading()" [error]="candles.error()" [empty]="!candles.value().length"
+             emptyTitle="Свечей ещё нет" emptyText="Дождитесь загрузки с MOEX — она идёт при старте и по будням в 19:15." (retry)="candles.reload()">
+    <app-candle-chart [candles]="candles.value()" [forecasts]="forecasts.value()?.items ?? []" />
+    <div class="legend" aria-label="Легенда маркеров">
+      <span><i class="swatch hit"></i>Попадание <b>{{ counts().hit }}</b></span>
+      <span><i class="swatch miss"></i>Промах <b>{{ counts().miss }}</b></span>
+      <span><i class="swatch pending"></i>Нейтрально <b>{{ counts().neutral }}</b> · ждут цели <b>{{ counts().pending }}</b></span>
+      <span class="legend-note">↑ под свечой — ставка на рост, ↓ над свечой — на падение; без ставки ({{ counts().flat }}) не показаны</span>
+    </div>
+    @if (forecasts.error()) {
+      <app-state [error]="forecasts.error()" [compact]="true" errorTitle="Прогнозы не загрузились" (retry)="forecasts.reload()" />
+    }
+  </app-state>
+</section>

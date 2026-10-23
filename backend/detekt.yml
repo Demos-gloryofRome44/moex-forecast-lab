@@ -1,0 +1,38 @@
+# Поверх дефолтной конфигурации detekt (buildUponDefaultConfig = true).
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
+    max: 4
+  MaxLineLength:
+    maxLineLength: 150
+  UnusedPrivateProperty:
+    active: true
+  ForbiddenComment:
+    active: false
+complexity:
+  LongParameterList:
+    functionThreshold: 11
+    constructorThreshold: 12
+  TooManyFunctions:
+    thresholdInClasses: 20
+    thresholdInInterfaces: 30
+    thresholdInFiles: 30
+    thresholdInObjects: 20
+  LongMethod:
+    threshold: 80
+  CyclomaticComplexMethod:
+    threshold: 20
+naming:
+  # DTO одного контекста лежат в одном файле (*Dtos.kt, *Bodies.kt) — конвенция из архива backend.
+  MatchingDeclarationName:
+    active: false
+  FunctionNaming:
+    ignoreAnnotated: ['Test', 'ParameterizedTest']
+  ConstructorParameterNaming:
+    active: true
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
