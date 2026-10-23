@@ -44,6 +44,5 @@ bin/
 .kotlin/
 backend/**/build/
 *.log
-.idea/workspace.xml
-.idea/dbnavigator.xml
+.idea/
 .claude/
